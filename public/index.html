@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skidmons – Roblox Limited Values</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #f0883e, #f6c358);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
+        }
+        h1 small {
+            font-size: 0.9rem;
+            color: #8b949e;
+            -webkit-text-fill-color: #8b949e;
+            background: none;
+            margin-left: 10px;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        #search {
+            padding: 10px 16px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: #c9d1d9;
+            width: 250px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        #search:focus { border-color: #f0883e; }
+        .btn {
+            padding: 8px 18px;
+            border-radius: 6px;
+            border: none;
+            background: #21262d;
+            color: #c9d1d9;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #30363d; }
+        .btn-primary {
+            background: #f0883e;
+            color: #0d1117;
+            font-weight: 600;
+        }
+        .btn-primary:hover { background: #f6a85c; }
+        .stats {
+            display: flex;
+            gap: 25px;
+            font-size: 0.9rem;
+            color: #8b949e;
+            padding: 10px 0;
+        }
+        .stats span { color: #f0f6fc; font-weight: 600; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            background: #161b22;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        th {
+            text-align: left;
+            padding: 14px 16px;
+            background: #1c2128;
+            color: #8b949e;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.8rem;
+            border-bottom: 1px solid #30363d;
+        }
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #21262d;
+        }
+        tr:hover { background: #1c2128; }
+        .item-name {
+            font-weight: 500;
+            color: #f0f6fc;
+        }
+        .item-value {
+            font-weight: 600;
+            color: #f6c358;
+        }
+        .trend-up { color: #3fb950; }
+        .trend-down { color: #f85149; }
+        .trend-steady { color: #8b949e; }
+        .loading {
+            text-align: center;
+            padding: 60px 0;
+            color: #8b949e;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #8b949e;
+            font-size: 0.8rem;
+            border-top: 1px solid #21262d;
+            padding-top: 20px;
+        }
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8rem; }
+            #search { width: 100%; }
+            .controls { flex-direction: column; align-items: stretch; }
+            table { font-size: 0.8rem; }
+            th, td { padding: 8px 10px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>🪁 Skidmons <small>– Roblox Limiteds</small></h1>
+        <div class="controls">
+            <input type="text" id="search" placeholder="Search items..." oninput="filterTable()" />
+            <button class="btn btn-primary" onclick="fetchData()">🔄 Refresh</button>
+        </div>
+    </header>
+
+    <div class="stats" id="stats">
+        <div>Items: <span id="itemCount">0</span></div>
+        <div>Last updated: <span id="lastUpdated">—</span></div>
+    </div>
+
+    <div id="tableContainer">
+        <div class="loading">Loading limited items...</div>
+    </div>
+
+    <div class="footer">
+        Data sourced from <a href="https://www.rolimons.com" target="_blank" style="color:#f0883e;">Rolimon's</a> ·
+        Skidmons is not affiliated with Roblox
+    </div>
+</div>
+
+<script>
+    let items = [];
+    let originalItems = [];
+
+    async function fetchData() {
+        const container = document.getElementById('tableContainer');
+        container.innerHTML = '<div class="loading">⏳ Fetching data...</div>';
+        document.getElementById('itemCount').textContent = '...';
+        try {
+            const response = await fetch('/api/items');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            originalItems = Object.entries(data).map(([id, info]) => ({
+                id: parseInt(id),
+                name: info.name || 'Unknown',
+                value: info.value || 0,
+                demand: info.demand || 0,
+                trend: info.trend || 'stable',
+                projected: info.projected || false,
+            }));
+            items = [...originalItems];
+            renderTable(items);
+            document.getElementById('itemCount').textContent = items.length;
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+        } catch (err) {
+            container.innerHTML = `<div class="loading" style="color:#f85149;">❌ Error: ${err.message}</div>`;
+        }
+    }
+
+    function renderTable(itemsToShow) {
+        const container = document.getElementById('tableContainer');
+        if (!itemsToShow || itemsToShow.length === 0) {
+            container.innerHTML = '<div class="loading">No items found.</div>';
+            return;
+        }
+        let html = `
+            <table>
+                <thead><tr>
+                    <th>Name</th>
+                    <th>Value (R$)</th>
+                    <th>Demand</th>
+                    <th>Trend</th>
+                </tr></thead>
+                <tbody>
+        `;
+        itemsToShow.forEach(item => {
+            const trendClass = item.trend === 'rising' ? 'trend-up' :
+                              item.trend === 'falling' ? 'trend-down' : 'trend-steady';
+            const trendSymbol = item.trend === 'rising' ? '⬆' :
+                                item.trend === 'falling' ? '⬇' : '➖';
+            const demandText = item.demand > 0 ? `${item.demand}%` : '—';
+            html += `
+                <tr>
+                    <td class="item-name">${item.name}</td>
+                    <td class="item-value">${item.value.toLocaleString()}</td>
+                    <td>${demandText}</td>
+                    <td class="${trendClass}">${trendSymbol} ${item.trend}</td>
+                </tr>
+            `;
+        });
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    }
+
+    function filterTable() {
+        const query = document.getElementById('search').value.toLowerCase().trim();
+        items = query ? originalItems.filter(item => item.name.toLowerCase().includes(query)) : [...originalItems];
+        renderTable(items);
+        document.getElementById('itemCount').textContent = items.length;
+    }
+
+    fetchData();
+    setInterval(fetchData, 120000);
+</script>
+</body>
+</html>
